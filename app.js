@@ -17,7 +17,7 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const provider = new GoogleAuthProvider();
 
-const ADMIN_EMAILS = ["kai2002002@gmail.com"];
+const ADMIN_EMAILS = ["kai2002002@gmail.com", "drelingp@gmail.com"];
 
 let currentUser = null;
 let cart = JSON.parse(localStorage.getItem('drink_cart')) || [];
