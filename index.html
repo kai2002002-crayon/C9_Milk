@@ -14,6 +14,7 @@
             <button onclick="showSection('products')">首頁</button>
             <button onclick="showSection('cart')">購物車 (<span id="cartCount">0</span>)</button>
             <button onclick="showSection('history')">訂購記錄</button>
+            <button id="adminNavBtn" onclick="showSection('admin')" style="display: none; color: #ff5722; font-weight: bold;">管理員後台</button>
             <button id="logoutBtn">登出</button>
         </div>
     </nav>
@@ -82,6 +83,14 @@
             <h2>歷史訂單記錄</h2>
             <div id="orderHistoryList">
                 <!-- 訂單記錄會放在這裡 -->
+            </div>
+        </div>
+        <!-- 管理員後台區塊 -->
+        <div id="adminSection" class="section" style="display: none;">
+            <h2>管理員後台 - 所有同事訂單</h2>
+            <p>在此可以檢視所有人的訂單，並進行取消/刪除。</p>
+            <div id="allOrdersList">
+                <!-- 所有訂單會顯示在這裡 -->
             </div>
         </div>
     </div>
