@@ -124,18 +124,21 @@ function renderProducts(productList) {
         const tr = document.createElement('tr');
         if(userPurchaseHistory.has(p.code)) tr.style.backgroundColor = '#f0fff0'; // 買過的用微綠色底標記
 
-        tr.innerHTML = `
-            <td>${p.code}</td>
-            <td>${p.name} ${userPurchaseHistory.has(p.code) ? '⭐' : ''}</td>
-            <td>${p.packing}</td>
-            <td>$${p.price}</td>
-            <td>
-                <select id="qty-${p.code}">
+                tr.innerHTML = `
+            <td class="p-3 border-b whitespace-nowrap">${p.code}</td>
+            <td class="p-3 border-b min-w-[160px] md:min-w-[200px] whitespace-normal break-words leading-snug">${p.name} ${userPurchaseHistory.has(p.code) ? '⭐' : ''}</td>
+            <td class="p-3 border-b whitespace-nowrap">${p.packing}</td>
+            <td class="p-3 border-b whitespace-nowrap text-green-700 font-medium">$${p.price}</td>
+            <td class="p-3 border-b whitespace-nowrap">
+                <select id="qty-${p.code}" class="border border-gray-300 rounded px-2 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-green-500">
                     ${[0,1,2,3,4,5,6,7,8,9,10].map(n => `<option value="${n}">${n}</option>`).join('')}
                 </select>
             </td>
-            <td><button onclick="addToCart('${p.code}')" class="primary-btn" style="padding: 5px 10px;">加入</button></td>
+            <td class="p-3 border-b whitespace-nowrap">
+                <button onclick="addToCart('${p.code}')" class="bg-green-600 text-white px-3 py-1.5 rounded hover:bg-green-700 text-sm shadow-sm transition duration-150">加入</button>
+            </td>
         `;
+
         tbody.appendChild(tr);
     });
 }
@@ -181,16 +184,19 @@ function updateCartUI() {
     cart.forEach(item => {
         const subtotal = item.price * item.qty;
         total += subtotal;
-        tbody.innerHTML += `
+                tbody.innerHTML += `
             <tr>
-                <td>${item.code}</td>
-                <td>${item.name}</td>
-                <td>$${item.price}</td>
-                <td>${item.qty}</td>
-                <td>$${subtotal}</td>
-                <td><button onclick="removeFromCart('${item.code}')">刪除</button></td>
+                <td class="p-3 border-b whitespace-nowrap">${item.code}</td>
+                <td class="p-3 border-b min-w-[160px] whitespace-normal break-words leading-snug">${item.name}</td>
+                <td class="p-3 border-b whitespace-nowrap">$${item.price}</td>
+                <td class="p-3 border-b whitespace-nowrap">${item.qty}</td>
+                <td class="p-3 border-b whitespace-nowrap text-green-700 font-medium">$${subtotal}</td>
+                <td class="p-3 border-b whitespace-nowrap">
+                    <button onclick="removeFromCart('${item.code}')" class="text-red-500 hover:text-red-700 font-medium text-sm border border-red-200 px-2 py-1 rounded hover:bg-red-50">刪除</button>
+                </td>
             </tr>
         `;
+
     });
     document.getElementById('cartTotal').innerText = total;
 }
