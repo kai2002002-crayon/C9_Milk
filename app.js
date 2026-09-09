@@ -159,6 +159,7 @@ window.removeFromCart = (code) => {
 };
 
 function updateCartUI() {
+    localStorage.setItem('drink_cart', JSON.stringify(cart));
     document.getElementById('cartCount').innerText = cart.length;
     const tbody = document.getElementById('cartList');
     tbody.innerHTML = '';
