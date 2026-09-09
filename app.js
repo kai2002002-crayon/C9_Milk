@@ -1,11 +1,10 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
 import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
-import { getFirestore, collection, addDoc, query, where, getDocs, orderBy, serverTimestamp, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
-import products from './products.js';
+// 【修改】這裡多引入了 setDoc
+import { getFirestore, collection, addDoc, query, where, getDocs, orderBy, serverTimestamp, deleteDoc, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+// 保留 products.js 僅供第一次一鍵匯入使用
+import oldProducts from './products.js'; 
 
-// ==========================================
-// 1. 請把你在 Firebase 拿到的 Config 貼在這裡
-// ==========================================
 const firebaseConfig = {
   apiKey: "AIzaSyATCX2DDrRgRMtKCeslfSz5nEXEd_mqA7U",
   authDomain: "c9milk-bd868.firebaseapp.com",
@@ -16,23 +15,18 @@ const firebaseConfig = {
   measurementId: "G-WXKW5D8CL2"
 };
 
-// 初始化 Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const provider = new GoogleAuthProvider();
 
-// 請把這裡換成你登入 Google 的 Email
 const ADMIN_EMAILS = ["kai2002002@gmail.com"];
 
-// 系統狀態
 let currentUser = null;
 let cart = JSON.parse(localStorage.getItem('drink_cart')) || [];
-let userPurchaseHistory = new Set(); // 記錄買過的產品 code
+let userPurchaseHistory = new Set();
+let dynamicProducts = []; // 【新增】用來存放從資料庫抓下來的產品
 
-// ==========================================
-// 2. 畫面切換控制
-// ==========================================
 window.showSection = (sectionId) => {
     document.getElementById('loginSection').style.display = 'none';
     document.getElementById('productsSection').style.display = 'none';
@@ -42,12 +36,12 @@ window.showSection = (sectionId) => {
     document.getElementById(sectionId + 'Section').style.display = 'block';
 
     if (sectionId === 'history') loadOrderHistory();
-    if (sectionId === 'admin') loadAllOrdersForAdmin();
+    if (sectionId === 'admin') {
+        window.switchAdminTab('orders'); // 預設打開訂單管理
+        loadAllOrdersForAdmin();
+    }
 };
 
-// ==========================================
-// 3. 登入與身份驗證
-// ==========================================
 document.getElementById('loginBtn').addEventListener('click', () => {
     signInWithPopup(auth, provider).catch(error => alert("登入失敗: " + error.message));
 });
@@ -62,7 +56,6 @@ onAuthStateChanged(auth, async (user) => {
         document.getElementById('navLinks').style.display = 'flex';
         document.getElementById('userName').value = user.displayName; 
         
-        // 檢查是否為管理員
         const adminBtn = document.getElementById('adminNavBtn');
         if (ADMIN_EMAILS.includes(user.email)) {
             adminBtn.style.display = 'inline-block';
@@ -71,7 +64,8 @@ onAuthStateChanged(auth, async (user) => {
         }
 
         await loadUserPurchaseHistory(); 
-        renderProducts(products); 
+        await loadProductsFromDB(); // 【新增】登入後先從資料庫抓產品
+        renderProducts(dynamicProducts); 
         updateCartUI(); 
         
         window.showSection('products');
@@ -84,8 +78,17 @@ onAuthStateChanged(auth, async (user) => {
 });
 
 // ==========================================
-// 4. 產品與搜尋邏輯
+// 產品資料庫與搜尋邏輯
 // ==========================================
+// 【新增】從 Firestore 下載產品清單
+async function loadProductsFromDB() {
+    const querySnapshot = await getDocs(collection(db, "products"));
+    dynamicProducts = [];
+    querySnapshot.forEach((doc) => {
+        dynamicProducts.push(doc.data());
+    });
+}
+
 async function loadUserPurchaseHistory() {
     userPurchaseHistory.clear();
     const q = query(collection(db, "orders"), where("uid", "==", currentUser.uid));
@@ -98,7 +101,7 @@ async function loadUserPurchaseHistory() {
 
 document.getElementById('searchInput').addEventListener('input', (e) => {
     const keyword = e.target.value.toLowerCase().trim();
-    const filtered = products.filter(p => 
+    const filtered = dynamicProducts.filter(p => 
         p.name.toLowerCase().includes(keyword) || 
         p.code.toLowerCase().includes(keyword)
     );
@@ -108,6 +111,11 @@ document.getElementById('searchInput').addEventListener('input', (e) => {
 function renderProducts(productList) {
     const tbody = document.getElementById('productList');
     tbody.innerHTML = '';
+    
+    if (productList.length === 0) {
+        tbody.innerHTML = '<div class="p-6 text-center text-gray-500">找不到產品，或資料庫目前沒有產品。</div>';
+        return;
+    }
 
     const sortedProducts = [...productList].sort((a, b) => {
         const aBought = userPurchaseHistory.has(a.code);
@@ -145,26 +153,17 @@ function renderProducts(productList) {
     });
 }
 
-// ==========================================
-// 5. 購物車邏輯
-// ==========================================
+// 購物車與訂單相關邏輯 (保持不變)
 window.addToCart = (code) => {
     const qtySelect = document.getElementById(`qty-${code}`);
     const qty = parseInt(qtySelect.value);
-    
-    if (qty === 0) {
-        alert("請選擇大於 0 的數量");
-        return;
-    }
+    if (qty === 0) return alert("請選擇大於 0 的數量");
 
-    const product = products.find(p => p.code === code);
+    const product = dynamicProducts.find(p => p.code === code);
     const existingItemIndex = cart.findIndex(item => item.code === code);
 
-    if (existingItemIndex > -1) {
-        cart[existingItemIndex].qty = qty; 
-    } else {
-        cart.push({ ...product, qty });
-    }
+    if (existingItemIndex > -1) cart[existingItemIndex].qty = qty; 
+    else cart.push({ ...product, qty });
 
     qtySelect.value = 0; 
     updateCartUI();
@@ -208,12 +207,8 @@ function updateCartUI() {
     document.getElementById('cartTotal').innerText = total;
 }
 
-// ==========================================
-// 6. 結帳與存入資料庫
-// ==========================================
 document.getElementById('checkoutBtn').addEventListener('click', async () => {
     if (cart.length === 0) return alert("購物車是空的！");
-    
     const orderName = document.getElementById('userName').value.trim();
     if (!orderName) return alert("請輸入訂購人姓名！");
 
@@ -238,10 +233,8 @@ document.getElementById('checkoutBtn').addEventListener('click', async () => {
             status: "confirmed"
         };
 
-        // 寫入 Firestore 
         await addDoc(collection(db, "orders"), orderData);
         
-        // 發送確認信給該位同事
         try {
             await fetch('/api/send-confirmation', {
                 method: 'POST',
@@ -254,16 +247,15 @@ document.getElementById('checkoutBtn').addEventListener('click', async () => {
                 })
             });
         } catch (emailError) {
-            console.error("確認信發送失敗，但不影響訂單建立", emailError);
+            console.error("確認信發送失敗", emailError);
         }
 
-        // 清理
         cart = [];
         updateCartUI();
         await loadUserPurchaseHistory(); 
-        renderProducts(products); 
+        renderProducts(dynamicProducts); 
         
-        alert("訂購成功！確認信已發送至您的 Google 信箱。");
+        alert("訂購成功！確認信已發送。");
         window.showSection('history');
     } catch (error) {
         alert("訂購失敗: " + error.message);
@@ -273,22 +265,16 @@ document.getElementById('checkoutBtn').addEventListener('click', async () => {
     }
 });
 
-// ==========================================
-// 7. 讀取歷史訂單
-// ==========================================
 async function loadOrderHistory() {
     const listDiv = document.getElementById('orderHistoryList');
     listDiv.innerHTML = '<p class="text-gray-500">載入中...</p>';
-
     try {
         const q = query(collection(db, "orders"), where("uid", "==", currentUser.uid));
         const querySnapshot = await getDocs(q);
-        
         if (querySnapshot.empty) {
             listDiv.innerHTML = '<p class="text-gray-500">尚未有任何訂購記錄。</p>';
             return;
         }
-
         let orders = [];
         querySnapshot.forEach(doc => orders.push(doc.data()));
         orders.sort((a, b) => b.createdAt?.toMillis() - a.createdAt?.toMillis());
@@ -298,7 +284,6 @@ async function loadOrderHistory() {
             const itemsHtml = order.items.map(item => 
                 `<li>${item.name} <span class="text-gray-500 text-sm">(x${item.qty})</span> - <span class="font-medium">$${item.subtotal}</span></li>`
             ).join('');
-
             return `
                 <div class="border border-gray-200 p-5 rounded-lg bg-white shadow-sm space-y-2">
                     <p class="text-sm text-gray-500"><strong>訂購時間：</strong> ${dateStr}</p>
@@ -314,25 +299,42 @@ async function loadOrderHistory() {
 }
 
 // ==========================================
-// 8. 管理員功能：查看與管理所有訂單
+// 管理員功能：管理所有訂單與產品資料庫
 // ==========================================
+// 1. 管理員分頁切換
+window.switchAdminTab = (tab) => {
+    const tabOrders = document.getElementById('tabOrders');
+    const tabProducts = document.getElementById('tabProducts');
+    const adminOrdersTab = document.getElementById('adminOrdersTab');
+    const adminProductsTab = document.getElementById('adminProductsTab');
+
+    if (tab === 'orders') {
+        adminOrdersTab.style.display = 'block';
+        adminProductsTab.style.display = 'none';
+        tabOrders.className = "bg-green-600 text-white px-4 py-2 rounded-lg shadow-sm font-medium";
+        tabProducts.className = "bg-gray-100 text-gray-700 hover:bg-gray-200 px-4 py-2 rounded-lg font-medium transition";
+        loadAllOrdersForAdmin();
+    } else {
+        adminOrdersTab.style.display = 'none';
+        adminProductsTab.style.display = 'block';
+        tabOrders.className = "bg-gray-100 text-gray-700 hover:bg-gray-200 px-4 py-2 rounded-lg font-medium transition";
+        tabProducts.className = "bg-green-600 text-white px-4 py-2 rounded-lg shadow-sm font-medium";
+        renderAdminProducts();
+    }
+};
+
+// 2. 訂單管理
 async function loadAllOrdersForAdmin() {
     const listDiv = document.getElementById('allOrdersList');
     listDiv.innerHTML = '<p class="text-gray-500">載入中...</p>';
-
     try {
         const querySnapshot = await getDocs(collection(db, "orders"));
-        
         if (querySnapshot.empty) {
             listDiv.innerHTML = '<p class="text-gray-500">目前沒有任何訂單記錄。</p>';
             return;
         }
-
         let orders = [];
-        querySnapshot.forEach(docSnap => {
-            orders.push({ id: docSnap.id, ...docSnap.data() });
-        });
-        
+        querySnapshot.forEach(docSnap => { orders.push({ id: docSnap.id, ...docSnap.data() }); });
         orders.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
 
         listDiv.innerHTML = orders.map(order => {
@@ -340,7 +342,6 @@ async function loadAllOrdersForAdmin() {
             const itemsHtml = order.items.map(item => 
                 `<li>${item.name} <span class="text-gray-400 text-sm">(編號:${item.code})</span> <span class="font-medium text-gray-600">x ${item.qty}</span> - <span class="font-medium">$${item.subtotal}</span></li>`
             ).join('');
-
             return `
                 <div class="border-l-4 border-l-red-500 border-y border-r border-gray-200 p-5 rounded-r-lg bg-white shadow-sm space-y-2">
                     <p class="text-gray-800"><strong>訂購人：</strong> ${order.orderName} <span class="text-gray-500 text-sm">(${order.email})</span></p>
@@ -354,19 +355,100 @@ async function loadAllOrdersForAdmin() {
             `;
         }).join('');
     } catch (error) {
-        listDiv.innerHTML = '<p class="text-red-500">載入所有訂單失敗: ' + error.message + '</p>';
+        listDiv.innerHTML = '<p class="text-red-500">載入失敗: ' + error.message + '</p>';
     }
 }
 
-// 管理員刪除訂單功能
 window.deleteOrderByAdmin = async (orderId) => {
-    if (!confirm("確定要刪除這筆同事的訂單嗎？此動作無法復原。")) return;
-
+    if (!confirm("確定要刪除這筆同事的訂單嗎？")) return;
     try {
         await deleteDoc(doc(db, "orders", orderId));
         alert("訂單已刪除！");
         loadAllOrdersForAdmin(); 
+    } catch (error) { alert("刪除失敗: " + error.message); }
+};
+
+// 3. 產品管理 (新增、匯入、刪除)
+window.importProductsToDB = async () => {
+    if(!confirm("確定要將原本 products.js 的資料匯入到資料庫嗎？\n(如果已經匯入過，請不要重複執行以免覆蓋現有資料)")) return;
+    
+    const importBtn = event.target;
+    importBtn.innerText = "匯入中...";
+    importBtn.disabled = true;
+
+    try {
+        // 利用 setDoc 並以產品 code 作為文件 ID，確保不會重複
+        for (const p of oldProducts) {
+            await setDoc(doc(db, "products", p.code), p);
+        }
+        alert("全部產品匯入成功！以後都可以直接在網頁管理產品了！");
+        await loadProductsFromDB();
+        renderAdminProducts();
+        renderProducts(dynamicProducts);
+    } catch (error) {
+        alert("匯入失敗: " + error.message);
+    } finally {
+        importBtn.innerText = "一鍵匯入舊資料";
+        importBtn.disabled = false;
+    }
+};
+
+window.addNewProduct = async () => {
+    const code = document.getElementById('newProdCode').value.trim();
+    const name = document.getElementById('newProdName').value.trim();
+    const packing = document.getElementById('newProdPacking').value.trim();
+    const price = parseFloat(document.getElementById('newProdPrice').value);
+
+    if(!code || !name || !packing || isNaN(price)) return alert("請填寫完整產品資料，且價錢必須為數字！");
+
+    try {
+        // 使用 code 當作 ID，如果已經存在就會自動覆寫(修改)
+        await setDoc(doc(db, "products", code), { code, name, packing, price });
+        alert("產品儲存成功！");
+        
+        // 清空輸入框
+        document.getElementById('newProdCode').value = '';
+        document.getElementById('newProdName').value = '';
+        document.getElementById('newProdPacking').value = '';
+        document.getElementById('newProdPrice').value = '';
+        
+        await loadProductsFromDB();
+        renderAdminProducts();
+        renderProducts(dynamicProducts);
+    } catch (error) {
+        alert("儲存失敗: " + error.message);
+    }
+};
+
+window.deleteProduct = async (code, name) => {
+    if(!confirm(`確定要從資料庫中永久刪除【${name}】嗎？`)) return;
+    try {
+        await deleteDoc(doc(db, "products", code));
+        alert("產品已刪除！");
+        await loadProductsFromDB();
+        renderAdminProducts();
+        renderProducts(dynamicProducts);
     } catch (error) {
         alert("刪除失敗: " + error.message);
     }
 };
+
+function renderAdminProducts() {
+    const listDiv = document.getElementById('adminProductList');
+    
+    // 依據 code 排一下順序
+    const sorted = [...dynamicProducts].sort((a, b) => a.code.localeCompare(b.code, undefined, {numeric: true}));
+    
+    listDiv.innerHTML = sorted.map(p => `
+        <div class="flex flex-col md:flex-row justify-between md:items-center p-4 hover:bg-gray-50">
+            <div class="flex items-start md:items-center gap-4">
+                <span class="text-sm text-gray-500 font-mono w-12">${p.code}</span>
+                <span class="font-medium text-gray-800">${p.name} <span class="text-sm text-gray-500 font-normal ml-2">(${p.packing})</span></span>
+            </div>
+            <div class="flex items-center gap-4 mt-2 md:mt-0 justify-end w-full md:w-auto border-t md:border-0 pt-2 md:pt-0">
+                <span class="text-green-600 font-bold">$${p.price}</span>
+                <button onclick="deleteProduct('${p.code}', '${p.name}')" class="text-red-500 hover:text-red-700 text-sm border border-red-200 px-3 py-1 rounded transition bg-white">刪除</button>
+            </div>
+        </div>
+    `).join('');
+}
