@@ -45,16 +45,17 @@
 
             <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse">
-                    <thead>
-                        <tr class="bg-gray-100 text-gray-600 text-sm uppercase tracking-wider">
-                            <th class="p-3 border-b">Code</th>
-                            <th class="p-3 border-b">Name</th>
-                            <th class="p-3 border-b">Packing</th>
-                            <th class="p-3 border-b">Price ($)</th>
-                            <th class="p-3 border-b">數量</th>
-                            <th class="p-3 border-b">購物車</th>
-                        </tr>
-                    </thead>
+                    <!-- 產品列表的 thead -->
+<thead>
+    <tr class="bg-gray-100 text-gray-600 text-sm uppercase tracking-wider whitespace-nowrap">
+        <th class="p-3 border-b">Code</th>
+        <th class="p-3 border-b">Name</th>
+        <th class="p-3 border-b">Packing</th>
+        <th class="p-3 border-b">Price ($)</th>
+        <th class="p-3 border-b">數量</th>
+        <th class="p-3 border-b">操作</th>
+    </tr>
+</thead>
                     <tbody id="productList" class="divide-y divide-gray-200 text-sm">
                         <!-- 產品資料會由 JS 生成放在這裡 -->
                     </tbody>
@@ -67,16 +68,17 @@
             <h2 class="text-xl font-bold mb-4 text-gray-700">你的購物車</h2>
             <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse">
-                    <thead>
-                        <tr class="bg-gray-100 text-gray-600 text-sm uppercase tracking-wider">
-                            <th class="p-3 border-b">Code</th>
-                            <th class="p-3 border-b">Name</th>
-                            <th class="p-3 border-b">Price ($)</th>
-                            <th class="p-3 border-b">數量</th>
-                            <th class="p-3 border-b">小計 ($)</th>
-                            <th class="p-3 border-b">操作</th>
-                        </tr>
-                    </thead>
+                    <!-- 購物車的 thead 也一樣 -->
+<thead>
+    <tr class="bg-gray-100 text-gray-600 text-sm uppercase tracking-wider whitespace-nowrap">
+        <th class="p-3 border-b">Code</th>
+        <th class="p-3 border-b">Name</th>
+        <th class="p-3 border-b">Price ($)</th>
+        <th class="p-3 border-b">數量</th>
+        <th class="p-3 border-b">小計 ($)</th>
+        <th class="p-3 border-b">操作</th>
+    </tr>
+</thead>
                     <tbody id="cartList" class="divide-y divide-gray-200 text-sm">
                         <!-- 購物車資料會放在這裡 -->
                     </tbody>
