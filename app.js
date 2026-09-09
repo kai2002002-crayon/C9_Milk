@@ -21,7 +21,8 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const provider = new GoogleAuthProvider();
-
+// 請把這裡換成你登入 Google 的 Email
+const ADMIN_EMAILS = ["kai2002002@gmail.com"];
 // 系統狀態
 let currentUser = null;
 let cart = JSON.parse(localStorage.getItem('drink_cart')) || [];
@@ -35,9 +36,11 @@ window.showSection = (sectionId) => {
     document.getElementById('productsSection').style.display = 'none';
     document.getElementById('cartSection').style.display = 'none';
     document.getElementById('historySection').style.display = 'none';
+    document.getElementById('adminSection').style.display = 'none';
     document.getElementById(sectionId + 'Section').style.display = 'block';
 
     if (sectionId === 'history') loadOrderHistory();
+    if (sectionId === 'admin') loadAllOrdersForAdmin();
 };
 
 // ==========================================
@@ -55,15 +58,25 @@ onAuthStateChanged(auth, async (user) => {
     if (user) {
         currentUser = user;
         document.getElementById('navLinks').style.display = 'block';
-        document.getElementById('userName').value = user.displayName; // 預設填入 Google 名字
+        document.getElementById('userName').value = user.displayName; 
         
-        await loadUserPurchaseHistory(); // 載入購買歷史以決定排序
-        renderProducts(products); // 渲染產品清單
-        updateCartUI();
+        // 【新增】檢查是否為管理員
+        const adminBtn = document.getElementById('adminNavBtn');
+        if (ADMIN_EMAILS.includes(user.email)) {
+            adminBtn.style.display = 'inline-block';
+        } else {
+            adminBtn.style.display = 'none';
+        }
+
+        await loadUserPurchaseHistory(); 
+        renderProducts(products); 
+        updateCartUI(); 
+        
         window.showSection('products');
     } else {
         currentUser = null;
         document.getElementById('navLinks').style.display = 'none';
+        document.getElementById('adminNavBtn').style.display = 'none';
         window.showSection('login');
     }
 });
@@ -288,3 +301,64 @@ async function loadOrderHistory() {
         listDiv.innerHTML = '讀取記錄失敗: ' + error.message;
     }
 }
+// ==========================================
+// 8. 管理員功能：查看與管理所有訂單
+// ==========================================
+import { deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+async function loadAllOrdersForAdmin() {
+    const listDiv = document.getElementById('allOrdersList');
+    listDiv.innerHTML = '載入中...';
+
+    try {
+        // 不加 uid 限制，抓取資料庫裡所有的訂單
+        const querySnapshot = await getDocs(collection(db, "orders"));
+        
+        if (querySnapshot.empty) {
+            listDiv.innerHTML = '<p>目前沒有任何訂單記錄。</p>';
+            return;
+        }
+
+        let orders = [];
+        querySnapshot.forEach(docSnap => {
+            orders.push({ id: docSnap.id, ...docSnap.data() });
+        });
+        
+        // 按時間新到舊排序
+        orders.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
+
+        listDiv.innerHTML = orders.map(order => {
+            const dateStr = order.createdAt ? new Date(order.createdAt.toMillis()).toLocaleString('zh-HK') : '剛剛';
+            const itemsHtml = order.items.map(item => 
+                `<li>${item.name} (編號:${item.code}) x ${item.qty}箱 - $${item.subtotal}</li>`
+            ).join('');
+
+            return `
+                <div class="order-card" style="border-left: 4px solid #ff5722;">
+                    <p><strong>訂購人：</strong> ${order.orderName} <span style="color: #666; font-size: 0.9rem;">(${order.email})</span></p>
+                    <p><strong>訂購時間：</strong> ${dateStr}</p>
+                    <ul>${itemsHtml}</ul>
+                    <p style="text-align: right; font-weight: bold; color: var(--primary-color);">總計：$${order.total}</p>
+                    <div style="text-align: right; margin-top: 10px;">
+                        <button onclick="deleteOrderByAdmin('${order.id}')" style="background-color: #ff4d4d; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">刪除此訂單</button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    } catch (error) {
+        listDiv.innerHTML = '載入所有訂單失敗: ' + error.message;
+    }
+}
+
+// 管理員刪除訂單功能
+window.deleteOrderByAdmin = async (orderId) => {
+    if (!confirm("確定要刪除這筆同事的訂單嗎？此動作無法復原。")) return;
+
+    try {
+        await deleteDoc(doc(db, "orders", orderId));
+        alert("訂單已刪除！");
+        loadAllOrdersForAdmin(); // 重新整理列表
+    } catch (error) {
+        alert("刪除失敗: " + error.message);
+    }
+};
