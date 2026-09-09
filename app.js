@@ -60,6 +60,37 @@ function isOrderLocked(millis) {
     }
     return now.getTime() >= cutoffTime;
 }
+// ==========================================
+// 計算並顯示下一期截單日
+// ==========================================
+function displayCutoffDate() {
+    const now = new Date();
+    let y = now.getFullYear();
+    let m = now.getMonth();
+    
+    // 計算這個月的最後一天與截單日
+    let lastDay = new Date(y, m + 1, 0).getDate();
+    let cutoffDay = lastDay - 2;
+    
+    // 如果今天已經「超過」本月截單日 (例如今天是30號，截單是29號)
+    // 則顯示下個月的截單日
+    if (now.getDate() > cutoffDay) {
+        m++;
+        if (m > 11) {
+            m = 0;
+            y++;
+        }
+        // 重新計算下個月的截單日
+        lastDay = new Date(y, m + 1, 0).getDate();
+        cutoffDay = lastDay - 2;
+    }
+    
+    const displayEl = document.getElementById('cutoffDateDisplay');
+    if (displayEl) {
+        // 顯示格式：YYYY年MM月DD日 晚上 11:50 (搭配之前 Vercel Cron 的設定)
+        displayEl.innerText = `${y}年${m + 1}月${cutoffDay}日 晚上 11:50`;
+    }
+}
 
 // ==========================================
 // 基礎操作
@@ -91,6 +122,7 @@ onAuthStateChanged(auth, async (user) => {
         await loadProductsFromDB();
         renderProducts(dynamicProducts); 
         updateCartUI(); 
+        displayCutoffDate();
         window.showSection('products');
     } else {
         currentUser = null;
