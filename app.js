@@ -24,7 +24,7 @@ const provider = new GoogleAuthProvider();
 
 // 系統狀態
 let currentUser = null;
-let cart = [];
+let cart = JSON.parse(localStorage.getItem('drink_cart')) || [];
 let userPurchaseHistory = new Set(); // 記錄買過的產品 code
 
 // ==========================================
@@ -59,6 +59,7 @@ onAuthStateChanged(auth, async (user) => {
         
         await loadUserPurchaseHistory(); // 載入購買歷史以決定排序
         renderProducts(products); // 渲染產品清單
+        updateCartUI();
         window.showSection('products');
     } else {
         currentUser = null;
