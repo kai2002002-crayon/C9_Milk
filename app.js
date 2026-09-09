@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
 import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
-import { getFirestore, collection, addDoc, query, where, getDocs, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+import { getFirestore, collection, addDoc, query, where, getDocs, orderBy, serverTimestamp, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 import products from './products.js';
 
 // ==========================================
@@ -21,8 +21,10 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const provider = new GoogleAuthProvider();
+
 // 請把這裡換成你登入 Google 的 Email
 const ADMIN_EMAILS = ["kai2002002@gmail.com"];
+
 // 系統狀態
 let currentUser = null;
 let cart = JSON.parse(localStorage.getItem('drink_cart')) || [];
@@ -57,10 +59,10 @@ document.getElementById('logoutBtn').addEventListener('click', () => {
 onAuthStateChanged(auth, async (user) => {
     if (user) {
         currentUser = user;
-        document.getElementById('navLinks').style.display = 'block';
+        document.getElementById('navLinks').style.display = 'flex';
         document.getElementById('userName').value = user.displayName; 
         
-        // 【新增】檢查是否為管理員
+        // 檢查是否為管理員
         const adminBtn = document.getElementById('adminNavBtn');
         if (ADMIN_EMAILS.includes(user.email)) {
             adminBtn.style.display = 'inline-block';
@@ -84,7 +86,6 @@ onAuthStateChanged(auth, async (user) => {
 // ==========================================
 // 4. 產品與搜尋邏輯
 // ==========================================
-// 載入購買記錄 (只取曾買過的 code)
 async function loadUserPurchaseHistory() {
     userPurchaseHistory.clear();
     const q = query(collection(db, "orders"), where("uid", "==", currentUser.uid));
@@ -95,10 +96,8 @@ async function loadUserPurchaseHistory() {
     });
 }
 
-// 搜尋功能
 document.getElementById('searchInput').addEventListener('input', (e) => {
     const keyword = e.target.value.toLowerCase().trim();
-    // 只要產品名字包含關鍵字，或是 code 包含關鍵字就算符合
     const filtered = products.filter(p => 
         p.name.toLowerCase().includes(keyword) || 
         p.code.toLowerCase().includes(keyword)
@@ -110,36 +109,39 @@ function renderProducts(productList) {
     const tbody = document.getElementById('productList');
     tbody.innerHTML = '';
 
-    // 排序邏輯：買過的優先，然後按 code 排
     const sortedProducts = [...productList].sort((a, b) => {
         const aBought = userPurchaseHistory.has(a.code);
         const bBought = userPurchaseHistory.has(b.code);
         if (aBought && !bBought) return -1;
         if (!aBought && bBought) return 1;
-        // 如果都買過或都沒買過，照 code 排序 (數字順序)
         return a.code.localeCompare(b.code, undefined, {numeric: true});
     });
 
     sortedProducts.forEach(p => {
-        const tr = document.createElement('tr');
-        if(userPurchaseHistory.has(p.code)) tr.style.backgroundColor = '#f0fff0'; // 買過的用微綠色底標記
+        const row = document.createElement('div');
+        row.className = "flex flex-col md:flex-row md:items-center p-4 gap-2 md:gap-4 hover:bg-gray-50 transition-colors";
+        if(userPurchaseHistory.has(p.code)) row.classList.add('bg-green-50');
 
-                tr.innerHTML = `
-            <td class="p-3 border-b whitespace-nowrap">${p.code}</td>
-            <td class="p-3 border-b min-w-[160px] md:min-w-[200px] whitespace-normal break-words leading-snug">${p.name} ${userPurchaseHistory.has(p.code) ? '⭐' : ''}</td>
-            <td class="p-3 border-b whitespace-nowrap">${p.packing}</td>
-            <td class="p-3 border-b whitespace-nowrap text-green-700 font-medium">$${p.price}</td>
-            <td class="p-3 border-b whitespace-nowrap">
-                <select id="qty-${p.code}" class="border border-gray-300 rounded px-2 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-green-500">
-                    ${[0,1,2,3,4,5,6,7,8,9,10].map(n => `<option value="${n}">${n}</option>`).join('')}
-                </select>
-            </td>
-            <td class="p-3 border-b whitespace-nowrap">
-                <button onclick="addToCart('${p.code}')" class="bg-green-600 text-white px-3 py-1.5 rounded hover:bg-green-700 text-sm shadow-sm transition duration-150">加入</button>
-            </td>
+        row.innerHTML = `
+            <div class="flex items-start md:items-center gap-3 flex-1">
+                <div class="w-12 md:w-16 text-sm text-gray-500 font-medium pt-1 md:pt-0">${p.code}</div>
+                <div class="flex-1 font-medium text-gray-800 leading-snug">${p.name} ${userPurchaseHistory.has(p.code) ? '⭐' : ''}</div>
+                <div class="w-auto md:w-24 text-sm text-gray-500 pt-1 md:pt-0">${p.packing}</div>
+            </div>
+            
+            <div class="flex items-center justify-end gap-3 w-full md:w-auto mt-2 md:mt-0">
+                <div class="w-auto md:w-20 text-green-700 font-bold text-right">$${p.price}</div>
+                <div class="w-auto md:w-20 text-center">
+                    <select id="qty-${p.code}" class="border border-gray-300 rounded px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-green-500 w-16 text-center">
+                        ${[0,1,2,3,4,5,6,7,8,9,10].map(n => `<option value="${n}">${n}</option>`).join('')}
+                    </select>
+                </div>
+                <div class="w-auto md:w-16 text-right">
+                    <button onclick="addToCart('${p.code}')" class="bg-green-600 text-white px-4 py-1.5 rounded hover:bg-green-700 text-sm shadow-sm transition duration-150">加入</button>
+                </div>
+            </div>
         `;
-
-        tbody.appendChild(tr);
+        tbody.appendChild(row);
     });
 }
 
@@ -159,12 +161,12 @@ window.addToCart = (code) => {
     const existingItemIndex = cart.findIndex(item => item.code === code);
 
     if (existingItemIndex > -1) {
-        cart[existingItemIndex].qty = qty; // 覆蓋數量
+        cart[existingItemIndex].qty = qty; 
     } else {
         cart.push({ ...product, qty });
     }
 
-    qtySelect.value = 0; // 重置下拉選單
+    qtySelect.value = 0; 
     updateCartUI();
     alert(`已將 ${qty} 箱 ${product.name} 加入購物車`);
 };
@@ -184,19 +186,24 @@ function updateCartUI() {
     cart.forEach(item => {
         const subtotal = item.price * item.qty;
         total += subtotal;
-                tbody.innerHTML += `
-            <tr>
-                <td class="p-3 border-b whitespace-nowrap">${item.code}</td>
-                <td class="p-3 border-b min-w-[160px] whitespace-normal break-words leading-snug">${item.name}</td>
-                <td class="p-3 border-b whitespace-nowrap">$${item.price}</td>
-                <td class="p-3 border-b whitespace-nowrap">${item.qty}</td>
-                <td class="p-3 border-b whitespace-nowrap text-green-700 font-medium">$${subtotal}</td>
-                <td class="p-3 border-b whitespace-nowrap">
-                    <button onclick="removeFromCart('${item.code}')" class="text-red-500 hover:text-red-700 font-medium text-sm border border-red-200 px-2 py-1 rounded hover:bg-red-50">刪除</button>
-                </td>
-            </tr>
+        
+        tbody.innerHTML += `
+            <div class="flex flex-col md:flex-row md:items-center p-4 gap-2 md:gap-4 hover:bg-gray-50 transition-colors">
+                <div class="flex items-start md:items-center gap-3 flex-1">
+                    <div class="w-12 md:w-16 text-sm text-gray-500 font-medium">${item.code}</div>
+                    <div class="flex-1 font-medium text-gray-800 leading-snug">${item.name}</div>
+                </div>
+                
+                <div class="flex items-center justify-end gap-4 w-full md:w-auto mt-2 md:mt-0">
+                    <div class="w-auto md:w-20 text-gray-600 text-right">$${item.price}</div>
+                    <div class="w-auto md:w-16 text-gray-800 font-medium text-center">x ${item.qty}</div>
+                    <div class="w-auto md:w-24 text-green-700 font-bold text-right">$${subtotal}</div>
+                    <div class="w-auto md:w-16 text-right">
+                        <button onclick="removeFromCart('${item.code}')" class="text-red-500 hover:text-red-700 font-medium text-sm border border-red-200 px-3 py-1.5 rounded hover:bg-red-50 transition">刪除</button>
+                    </div>
+                </div>
+            </div>
         `;
-
     });
     document.getElementById('cartTotal').innerText = total;
 }
@@ -231,10 +238,10 @@ document.getElementById('checkoutBtn').addEventListener('click', async () => {
             status: "confirmed"
         };
 
-        // 寫入 Firestore 的 orders 集合
+        // 寫入 Firestore 
         await addDoc(collection(db, "orders"), orderData);
         
-        // 【新增】發送確認信給該位同事
+        // 發送確認信給該位同事
         try {
             await fetch('/api/send-confirmation', {
                 method: 'POST',
@@ -250,7 +257,7 @@ document.getElementById('checkoutBtn').addEventListener('click', async () => {
             console.error("確認信發送失敗，但不影響訂單建立", emailError);
         }
 
-        // 成功後清理購物車
+        // 清理
         cart = [];
         updateCartUI();
         await loadUserPurchaseHistory(); 
@@ -271,19 +278,17 @@ document.getElementById('checkoutBtn').addEventListener('click', async () => {
 // ==========================================
 async function loadOrderHistory() {
     const listDiv = document.getElementById('orderHistoryList');
-    listDiv.innerHTML = '載入中...';
+    listDiv.innerHTML = '<p class="text-gray-500">載入中...</p>';
 
     try {
-        // 抓取該用戶的訂單，按時間排序 (注意: 需要在 Firestore 後台建立索引才能用 orderBy)
         const q = query(collection(db, "orders"), where("uid", "==", currentUser.uid));
         const querySnapshot = await getDocs(q);
         
         if (querySnapshot.empty) {
-            listDiv.innerHTML = '<p>尚未有任何訂購記錄。</p>';
+            listDiv.innerHTML = '<p class="text-gray-500">尚未有任何訂購記錄。</p>';
             return;
         }
 
-        // 手動排序 (降序)，避免一開始沒建 Firestore 索引而報錯
         let orders = [];
         querySnapshot.forEach(doc => orders.push(doc.data()));
         orders.sort((a, b) => b.createdAt?.toMillis() - a.createdAt?.toMillis());
@@ -291,37 +296,35 @@ async function loadOrderHistory() {
         listDiv.innerHTML = orders.map(order => {
             const dateStr = order.createdAt ? new Date(order.createdAt.toMillis()).toLocaleString('zh-HK') : '剛剛';
             const itemsHtml = order.items.map(item => 
-                `<li>${item.name} (x${item.qty}) - $${item.subtotal}</li>`
+                `<li>${item.name} <span class="text-gray-500 text-sm">(x${item.qty})</span> - <span class="font-medium">$${item.subtotal}</span></li>`
             ).join('');
 
             return `
-                <div class="order-card">
-                    <p><strong>訂購時間：</strong> ${dateStr}</p>
-                    <p><strong>訂購人：</strong> ${order.orderName}</p>
-                    <ul>${itemsHtml}</ul>
-                    <p style="text-align: right; font-weight: bold; color: var(--primary-color);">總計：$${order.total}</p>
+                <div class="border border-gray-200 p-5 rounded-lg bg-white shadow-sm space-y-2">
+                    <p class="text-sm text-gray-500"><strong>訂購時間：</strong> ${dateStr}</p>
+                    <p class="text-gray-800"><strong>訂購人：</strong> ${order.orderName}</p>
+                    <ul class="list-disc list-inside text-gray-700 space-y-1 ml-2">${itemsHtml}</ul>
+                    <div class="text-right text-lg font-bold text-green-600 pt-2 border-t mt-3">總計：$${order.total}</div>
                 </div>
             `;
         }).join('');
     } catch (error) {
-        listDiv.innerHTML = '讀取記錄失敗: ' + error.message;
+        listDiv.innerHTML = '<p class="text-red-500">讀取記錄失敗: ' + error.message + '</p>';
     }
 }
+
 // ==========================================
 // 8. 管理員功能：查看與管理所有訂單
 // ==========================================
-import { deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
-
 async function loadAllOrdersForAdmin() {
     const listDiv = document.getElementById('allOrdersList');
-    listDiv.innerHTML = '載入中...';
+    listDiv.innerHTML = '<p class="text-gray-500">載入中...</p>';
 
     try {
-        // 不加 uid 限制，抓取資料庫裡所有的訂單
         const querySnapshot = await getDocs(collection(db, "orders"));
         
         if (querySnapshot.empty) {
-            listDiv.innerHTML = '<p>目前沒有任何訂單記錄。</p>';
+            listDiv.innerHTML = '<p class="text-gray-500">目前沒有任何訂單記錄。</p>';
             return;
         }
 
@@ -330,29 +333,28 @@ async function loadAllOrdersForAdmin() {
             orders.push({ id: docSnap.id, ...docSnap.data() });
         });
         
-        // 按時間新到舊排序
         orders.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
 
         listDiv.innerHTML = orders.map(order => {
             const dateStr = order.createdAt ? new Date(order.createdAt.toMillis()).toLocaleString('zh-HK') : '剛剛';
             const itemsHtml = order.items.map(item => 
-                `<li>${item.name} (編號:${item.code}) x ${item.qty}箱 - $${item.subtotal}</li>`
+                `<li>${item.name} <span class="text-gray-400 text-sm">(編號:${item.code})</span> <span class="font-medium text-gray-600">x ${item.qty}</span> - <span class="font-medium">$${item.subtotal}</span></li>`
             ).join('');
 
             return `
-                <div class="order-card" style="border-left: 4px solid #ff5722;">
-                    <p><strong>訂購人：</strong> ${order.orderName} <span style="color: #666; font-size: 0.9rem;">(${order.email})</span></p>
-                    <p><strong>訂購時間：</strong> ${dateStr}</p>
-                    <ul>${itemsHtml}</ul>
-                    <p style="text-align: right; font-weight: bold; color: var(--primary-color);">總計：$${order.total}</p>
-                    <div style="text-align: right; margin-top: 10px;">
-                        <button onclick="deleteOrderByAdmin('${order.id}')" style="background-color: #ff4d4d; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">刪除此訂單</button>
+                <div class="border-l-4 border-l-red-500 border-y border-r border-gray-200 p-5 rounded-r-lg bg-white shadow-sm space-y-2">
+                    <p class="text-gray-800"><strong>訂購人：</strong> ${order.orderName} <span class="text-gray-500 text-sm">(${order.email})</span></p>
+                    <p class="text-sm text-gray-500"><strong>訂購時間：</strong> ${dateStr}</p>
+                    <ul class="list-disc list-inside text-gray-700 space-y-1 ml-2">${itemsHtml}</ul>
+                    <div class="text-right text-lg font-bold text-green-600 pt-2 border-t mt-3">總計：$${order.total}</div>
+                    <div class="text-right mt-3">
+                        <button onclick="deleteOrderByAdmin('${order.id}')" class="bg-red-500 hover:bg-red-600 text-white px-4 py-1.5 rounded text-sm shadow-sm transition">刪除此訂單</button>
                     </div>
                 </div>
             `;
         }).join('');
     } catch (error) {
-        listDiv.innerHTML = '載入所有訂單失敗: ' + error.message;
+        listDiv.innerHTML = '<p class="text-red-500">載入所有訂單失敗: ' + error.message + '</p>';
     }
 }
 
@@ -363,7 +365,7 @@ window.deleteOrderByAdmin = async (orderId) => {
     try {
         await deleteDoc(doc(db, "orders", orderId));
         alert("訂單已刪除！");
-        loadAllOrdersForAdmin(); // 重新整理列表
+        loadAllOrdersForAdmin(); 
     } catch (error) {
         alert("刪除失敗: " + error.message);
     }
