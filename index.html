@@ -3,97 +3,108 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>藍色奶訂購系統</title>
-    <link rel="stylesheet" href="style.css">
+    <title>內部飲品訂購系統</title>
+    <!-- 引入 Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
+<body class="bg-gray-50 text-gray-800 font-sans min-h-screen">
+
     <!-- 頂部導覽列 -->
-    <nav>
-        <div class="nav-brand">藍色奶訂購系統</div>
-        <div class="nav-links" id="navLinks" style="display: none;">
-            <button onclick="showSection('products')">首頁</button>
-            <button onclick="showSection('cart')">購物車 (<span id="cartCount">0</span>)</button>
-            <button onclick="showSection('history')">訂購記錄</button>
-            <button id="adminNavBtn" onclick="showSection('admin')" style="display: none; color: #ff5722; font-weight: bold;">管理員後台</button>
-            <button id="logoutBtn">登出</button>
+    <nav class="bg-white shadow-md px-6 py-4 flex justify-between items-center">
+        <div class="text-xl font-bold text-green-700">🥤 內部飲品訂購系統</div>
+        <div class="space-x-4 items-center" id="navLinks" style="display: none;">
+            <button onclick="showSection('products')" class="text-gray-600 hover:text-green-600 font-medium">首頁</button>
+            <button onclick="showSection('cart')" class="text-gray-600 hover:text-green-600 font-medium">購物車 (<span id="cartCount" class="bg-green-100 text-green-800 px-2 py-0.5 rounded-full text-sm">0</span>)</button>
+            <button onclick="showSection('history')" class="text-gray-600 hover:text-green-600 font-medium">訂購記錄</button>
+            <button id="adminNavBtn" onclick="showSection('admin')" style="display: none;" class="bg-red-50 text-red-600 border border-red-200 px-3 py-1 rounded hover:bg-red-100 font-medium text-sm">管理員後台</button>
+            <button id="logoutBtn" class="bg-gray-100 text-gray-700 px-3 py-1 rounded hover:bg-gray-200 text-sm">登出</button>
         </div>
     </nav>
 
-    <div class="container">
+    <main class="max-w-4xl mx-auto mt-8 p-6 bg-white rounded-xl shadow-sm border border-gray-100 mx-4 md:mx-auto">
         <!-- 登入區塊 -->
-        <div id="loginSection" class="section">
-            <h2>請先登入以繼續</h2>
-            <button id="loginBtn" class="primary-btn">使用 Google 帳號登入</button>
+        <div id="loginSection" class="section text-center py-12">
+            <h2 class="text-2xl font-bold mb-4 text-gray-700">請先登入以繼續</h2>
+            <button id="loginBtn" class="bg-green-600 text-white font-medium px-6 py-3 rounded-lg shadow hover:bg-green-700 transition duration-200">
+                使用 Google 帳號登入
+            </button>
         </div>
 
         <!-- 產品列表區塊 -->
         <div id="productsSection" class="section" style="display: none;">
-            <div class="user-info">
-                <label for="userName">訂購人姓名：</label>
-                <input type="text" id="userName" placeholder="請輸入姓名">
-            </div>
-            
-            <div class="search-box">
-                <input type="text" id="searchInput" placeholder="輸入產品名稱或編號搜尋...">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                <div class="flex items-center gap-2">
+                    <label for="userName" class="font-medium text-gray-700">訂購人姓名：</label>
+                    <input type="text" id="userName" placeholder="請輸入姓名" class="border border-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-green-500">
+                </div>
+                
+                <div class="w-full md:w-auto">
+                    <input type="text" id="searchInput" placeholder="🔍 輸入產品名稱或編號搜尋..." class="border border-gray-300 rounded-lg px-4 py-1.5 w-full md:w-72 focus:outline-none focus:ring-2 focus:ring-green-500">
+                </div>
             </div>
 
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>Code</th>
-                        <th>Name</th>
-                        <th>Packing</th>
-                        <th>Price ($)</th>
-                        <th>數量</th>
-                        <th>購物車</th>
-                    </tr>
-                </thead>
-                <tbody id="productList">
-                    <!-- 產品資料會由 JS 生成放在這裡 -->
-                </tbody>
-            </table>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-gray-100 text-gray-600 text-sm uppercase tracking-wider">
+                            <th class="p-3 border-b">Code</th>
+                            <th class="p-3 border-b">Name</th>
+                            <th class="p-3 border-b">Packing</th>
+                            <th class="p-3 border-b">Price ($)</th>
+                            <th class="p-3 border-b">數量</th>
+                            <th class="p-3 border-b">購物車</th>
+                        </tr>
+                    </thead>
+                    <tbody id="productList" class="divide-y divide-gray-200 text-sm">
+                        <!-- 產品資料會由 JS 生成放在這裡 -->
+                    </tbody>
+                </table>
+            </div>
         </div>
 
         <!-- 購物車區塊 -->
         <div id="cartSection" class="section" style="display: none;">
-            <h2>你的購物車</h2>
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>Code</th>
-                        <th>Name</th>
-                        <th>Price ($)</th>
-                        <th>數量</th>
-                        <th>小計 ($)</th>
-                        <th>操作</th>
-                    </tr>
-                </thead>
-                <tbody id="cartList">
-                    <!-- 購物車資料會放在這裡 -->
-                </tbody>
-            </table>
-            <div class="cart-summary">
-                <h3>總金額: $<span id="cartTotal">0</span></h3>
-                <button id="checkoutBtn" class="primary-btn">確認訂購</button>
+            <h2 class="text-xl font-bold mb-4 text-gray-700">你的購物車</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-gray-100 text-gray-600 text-sm uppercase tracking-wider">
+                            <th class="p-3 border-b">Code</th>
+                            <th class="p-3 border-b">Name</th>
+                            <th class="p-3 border-b">Price ($)</th>
+                            <th class="p-3 border-b">數量</th>
+                            <th class="p-3 border-b">小計 ($)</th>
+                            <th class="p-3 border-b">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="cartList" class="divide-y divide-gray-200 text-sm">
+                        <!-- 購物車資料會放在這裡 -->
+                    </tbody>
+                </table>
+            </div>
+            <div class="mt-6 flex flex-col items-end gap-3 border-t pt-4">
+                <h3 class="text-xl font-bold text-gray-800">總金額: $<span id="cartTotal" class="text-green-600">0</span></h3>
+                <button id="checkoutBtn" class="bg-green-600 text-white font-medium px-6 py-2.5 rounded-lg shadow hover:bg-green-700 transition duration-200">確認訂購</button>
             </div>
         </div>
 
         <!-- 訂單記錄區塊 -->
         <div id="historySection" class="section" style="display: none;">
-            <h2>歷史訂單記錄</h2>
-            <div id="orderHistoryList">
+            <h2 class="text-xl font-bold mb-4 text-gray-700">歷史訂單記錄</h2>
+            <div id="orderHistoryList" class="space-y-4">
                 <!-- 訂單記錄會放在這裡 -->
             </div>
         </div>
+
         <!-- 管理員後台區塊 -->
         <div id="adminSection" class="section" style="display: none;">
-            <h2>管理員後台 - 所有同事訂單</h2>
-            <p>在此可以檢視所有人的訂單，並進行取消/刪除。</p>
-            <div id="allOrdersList">
+            <h2 class="text-xl font-bold mb-2 text-gray-700">管理員後台 - 所有同事訂單</h2>
+            <p class="text-sm text-gray-500 mb-6">在此可以檢視所有人的訂單，並進行取消/刪除。</p>
+            <div id="allOrdersList" class="space-y-4">
                 <!-- 所有訂單會顯示在這裡 -->
             </div>
         </div>
-    </div>
+    </main>
 
     <!-- 載入 Firebase 與主程式 -->
     <script type="module" src="app.js"></script>
