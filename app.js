@@ -215,13 +215,29 @@ document.getElementById('checkoutBtn').addEventListener('click', async () => {
         // 寫入 Firestore 的 orders 集合
         await addDoc(collection(db, "orders"), orderData);
         
+        // 【新增】發送確認信給該位同事
+        try {
+            await fetch('/api/send-confirmation', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email: currentUser.email,
+                    orderName: orderName,
+                    items: orderData.items,
+                    total: orderData.total
+                })
+            });
+        } catch (emailError) {
+            console.error("確認信發送失敗，但不影響訂單建立", emailError);
+        }
+
         // 成功後清理購物車
         cart = [];
         updateCartUI();
-        await loadUserPurchaseHistory(); // 更新購買歷史，確保回到首頁時⭐標記會出現
+        await loadUserPurchaseHistory(); 
         renderProducts(products); 
         
-        alert("訂購成功！");
+        alert("訂購成功！確認信已發送至您的 Google 信箱。");
         window.showSection('history');
     } catch (error) {
         alert("訂購失敗: " + error.message);
