@@ -105,10 +105,52 @@
 
         <!-- 管理員後台區塊 -->
         <div id="adminSection" class="section" style="display: none;">
-            <h2 class="text-xl font-bold mb-2 text-gray-700">管理員後台 - 所有同事訂單</h2>
-            <p class="text-sm text-gray-500 mb-6">在此可以檢視所有人的訂單，並進行取消/刪除。</p>
-            <div id="allOrdersList" class="space-y-4">
-                <!-- 所有訂單會顯示在這裡 -->
+            <!-- 管理員分頁切換 -->
+            <div class="flex flex-col md:flex-row gap-3 mb-6 border-b pb-4">
+                <button onclick="switchAdminTab('orders')" id="tabOrders" class="bg-green-600 text-white px-4 py-2 rounded-lg shadow-sm font-medium">📦 訂單管理</button>
+                <button onclick="switchAdminTab('products')" id="tabProducts" class="bg-gray-100 text-gray-700 hover:bg-gray-200 px-4 py-2 rounded-lg font-medium transition">🏷️ 產品管理</button>
+            </div>
+
+            <!-- 訂單管理分頁 -->
+            <div id="adminOrdersTab">
+                <h2 class="text-xl font-bold mb-2 text-gray-700">管理員後台 - 所有同事訂單</h2>
+                <p class="text-sm text-gray-500 mb-6">在此可以檢視所有人的訂單，並進行取消/刪除。</p>
+                <div id="allOrdersList" class="space-y-4">
+                    <!-- 所有訂單會顯示在這裡 -->
+                </div>
+            </div>
+
+            <!-- 產品管理分頁 -->
+            <div id="adminProductsTab" style="display: none;">
+                <h2 class="text-xl font-bold mb-4 text-gray-700">產品資料庫管理</h2>
+                
+                <!-- 一鍵匯入提示區 -->
+                <div class="bg-blue-50 border border-blue-100 p-4 rounded-lg mb-6 flex flex-col md:flex-row justify-between md:items-center gap-4">
+                    <div>
+                        <p class="text-blue-800 font-bold">初次啟用資料庫？</p>
+                        <p class="text-sm text-blue-600 mt-1">點擊右方按鈕，將 products.js 中的現有產品一鍵匯入到資料庫中。（匯入過請勿重複點擊）</p>
+                    </div>
+                    <button onclick="importProductsToDB()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow-sm text-sm whitespace-nowrap">一鍵匯入舊資料</button>
+                </div>
+
+                <!-- 新增產品表單 -->
+                <div class="bg-white p-5 border border-gray-200 rounded-lg shadow-sm mb-6">
+                    <h3 class="font-bold text-gray-700 mb-3 border-b pb-2">➕ 新增 / 修改產品</h3>
+                    <p class="text-xs text-gray-500 mb-4">提示：如果輸入的 Code 與現有產品相同，將會直接覆蓋（修改）該產品的資料。</p>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                        <input type="text" id="newProdCode" placeholder="Code (例: A01)" class="border border-gray-300 p-2 rounded focus:ring-2 focus:ring-green-500 outline-none">
+                        <input type="text" id="newProdName" placeholder="產品名稱" class="border border-gray-300 p-2 rounded focus:ring-2 focus:ring-green-500 outline-none">
+                        <input type="text" id="newProdPacking" placeholder="包裝 (例: 250ml x 24)" class="border border-gray-300 p-2 rounded focus:ring-2 focus:ring-green-500 outline-none">
+                        <input type="number" id="newProdPrice" placeholder="價錢 ($)" class="border border-gray-300 p-2 rounded focus:ring-2 focus:ring-green-500 outline-none">
+                    </div>
+                    <button onclick="addNewProduct()" class="mt-4 bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded shadow-sm w-full md:w-auto font-medium">確認儲存</button>
+                </div>
+
+                <!-- 現有產品列表 -->
+                <h3 class="font-bold text-gray-700 mb-3">現有產品清單</h3>
+                <div id="adminProductList" class="divide-y divide-gray-200 border rounded-lg bg-white shadow-sm">
+                    <!-- 管理員產品列表會由 JS 生成 -->
+                </div>
             </div>
         </div>
     </main>
