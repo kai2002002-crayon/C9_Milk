@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>內部飲品訂購系統</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- 頂部導覽列 -->
+    <nav>
+        <div class="nav-brand">飲品訂購系統</div>
+        <div class="nav-links" id="navLinks" style="display: none;">
+            <button onclick="showSection('products')">首頁</button>
+            <button onclick="showSection('cart')">購物車 (<span id="cartCount">0</span>)</button>
+            <button onclick="showSection('history')">訂購記錄</button>
+            <button id="logoutBtn">登出</button>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- 登入區塊 -->
+        <div id="loginSection" class="section">
+            <h2>請先登入以繼續</h2>
+            <button id="loginBtn" class="primary-btn">使用 Google 帳號登入</button>
+        </div>
+
+        <!-- 產品列表區塊 -->
+        <div id="productsSection" class="section" style="display: none;">
+            <div class="user-info">
+                <label for="userName">訂購人姓名：</label>
+                <input type="text" id="userName" placeholder="請輸入姓名">
+            </div>
+            
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="輸入產品名稱或編號搜尋...">
+            </div>
+
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Code</th>
+                        <th>Name</th>
+                        <th>Packing</th>
+                        <th>Price ($)</th>
+                        <th>數量</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="productList">
+                    <!-- 產品資料會由 JS 生成放在這裡 -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 購物車區塊 -->
+        <div id="cartSection" class="section" style="display: none;">
+            <h2>你的購物車</h2>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Code</th>
+                        <th>Name</th>
+                        <th>Price ($)</th>
+                        <th>數量</th>
+                        <th>小計 ($)</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="cartList">
+                    <!-- 購物車資料會放在這裡 -->
+                </tbody>
+            </table>
+            <div class="cart-summary">
+                <h3>總金額: $<span id="cartTotal">0</span></h3>
+                <button id="checkoutBtn" class="primary-btn">確認訂購</button>
+            </div>
+        </div>
+
+        <!-- 訂單記錄區塊 -->
+        <div id="historySection" class="section" style="display: none;">
+            <h2>歷史訂單記錄</h2>
+            <div id="orderHistoryList">
+                <!-- 訂單記錄會放在這裡 -->
+            </div>
+        </div>
+    </div>
+
+    <!-- 載入 Firebase 與主程式 -->
+    <script type="module" src="app.js"></script>
+</body>
+</html>
