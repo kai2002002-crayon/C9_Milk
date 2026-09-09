@@ -88,7 +88,7 @@ function displayCutoffDate() {
     const displayEl = document.getElementById('cutoffDateDisplay');
     if (displayEl) {
         // 顯示格式：YYYY年MM月DD日 晚上 11:50 (搭配之前 Vercel Cron 的設定)
-        displayEl.innerText = `${y}年${m + 1}月${cutoffDay}日 晚上 11:50`;
+        displayEl.innerText = `${y}年${m + 1}月${cutoffDay}日 23:50`;
     }
 }
 
