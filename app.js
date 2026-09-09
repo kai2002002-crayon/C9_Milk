@@ -7,12 +7,13 @@ import products from './products.js';
 // 1. 請把你在 Firebase 拿到的 Config 貼在這裡
 // ==========================================
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_AUTH_DOMAIN",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_STORAGE_BUCKET",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyATCX2DDrRgRMtKCeslfSz5nEXEd_mqA7U",
+  authDomain: "c9milk-bd868.firebaseapp.com",
+  projectId: "c9milk-bd868",
+  storageBucket: "c9milk-bd868.firebasestorage.app",
+  messagingSenderId: "766220739285",
+  appId: "1:766220739285:web:68ba76af551d9f1ae9785c",
+  measurementId: "G-WXKW5D8CL2"
 };
 
 // 初始化 Firebase
