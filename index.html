@@ -3,54 +3,42 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>藍色奶訂購系統</title>
-    <!-- 引入 Tailwind CSS CDN -->
+    <title>內部飲品訂購系統</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-50 text-gray-800 font-sans min-h-screen">
 
-        <!-- 頂部導覽列 -->
     <nav class="bg-white shadow-md px-4 md:px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-4 md:gap-0">
-        <!-- 第一行：頁面名稱 -->
-        <div class="text-xl font-bold text-green-700 text-center w-full md:w-auto">🥤 藍色奶訂購系統</div>
-        
-        <!-- 第二行：各按鈕 (使用 flex-wrap 讓按鈕在極小螢幕自動換行) -->
+        <div class="text-xl font-bold text-green-700 text-center w-full md:w-auto">🥤 內部飲品訂購系統</div>
         <div class="flex flex-wrap justify-center items-center gap-3 md:gap-4" id="navLinks" style="display: none;">
             <button onclick="showSection('products')" class="text-gray-600 hover:text-green-600 font-medium text-sm md:text-base">首頁</button>
             <button onclick="showSection('cart')" class="text-gray-600 hover:text-green-600 font-medium text-sm md:text-base">購物車 (<span id="cartCount" class="bg-green-100 text-green-800 px-2 py-0.5 rounded-full text-xs md:text-sm">0</span>)</button>
             <button onclick="showSection('history')" class="text-gray-600 hover:text-green-600 font-medium text-sm md:text-base">訂購記錄</button>
-            <!-- 名稱縮短為「管理員」 -->
             <button id="adminNavBtn" onclick="showSection('admin')" style="display: none;" class="bg-red-50 text-red-600 border border-red-200 px-3 py-1 rounded hover:bg-red-100 font-medium text-xs md:text-sm shadow-sm">管理員</button>
             <button id="logoutBtn" class="bg-gray-100 text-gray-700 px-3 py-1 rounded hover:bg-gray-200 text-xs md:text-sm shadow-sm">登出</button>
         </div>
     </nav>
 
-
-    <main class="max-w-4xl mx-auto mt-8 p-6 bg-white rounded-xl shadow-sm border border-gray-100 mx-4 md:mx-auto">
-        <!-- 登入區塊 -->
+    <main class="max-w-5xl mx-auto mt-8 p-6 bg-white rounded-xl shadow-sm border border-gray-100 mx-4 md:mx-auto">
+        <!-- 登入 -->
         <div id="loginSection" class="section text-center py-12">
             <h2 class="text-2xl font-bold mb-4 text-gray-700">請先登入以繼續</h2>
-            <button id="loginBtn" class="bg-green-600 text-white font-medium px-6 py-3 rounded-lg shadow hover:bg-green-700 transition duration-200">
-                使用 Google 帳號登入
-            </button>
+            <button id="loginBtn" class="bg-green-600 text-white font-medium px-6 py-3 rounded-lg shadow hover:bg-green-700 transition">使用 Google 帳號登入</button>
         </div>
 
-        <!-- 產品列表區塊 -->
+        <!-- 產品清單 -->
         <div id="productsSection" class="section" style="display: none;">
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
                 <div class="flex items-center gap-2">
                     <label for="userName" class="font-medium text-gray-700">訂購人姓名：</label>
                     <input type="text" id="userName" placeholder="請輸入姓名" class="border border-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-green-500">
                 </div>
-                
                 <div class="w-full md:w-auto">
                     <input type="text" id="searchInput" placeholder="🔍 輸入產品名稱或編號搜尋..." class="border border-gray-300 rounded-lg px-4 py-1.5 w-full md:w-72 focus:outline-none focus:ring-2 focus:ring-green-500">
                 </div>
             </div>
 
-            <!-- 改用響應式 DIV 表格 -->
             <div class="bg-white border rounded-lg shadow-sm">
-                <!-- 桌機版標題列 (手機版會自動隱藏) -->
                 <div class="hidden md:flex items-center gap-4 bg-gray-100 p-4 text-sm uppercase tracking-wider text-gray-600 font-bold rounded-t-lg">
                     <div class="w-16">Code</div>
                     <div class="flex-1">Name</div>
@@ -59,21 +47,15 @@
                     <div class="w-20 text-center">數量</div>
                     <div class="w-16 text-center">操作</div>
                 </div>
-                
-                <!-- 產品清單內容 -->
-                <div id="productList" class="divide-y divide-gray-200">
-                    <!-- 產品資料會由 JS 生成放在這裡 -->
-                </div>
+                <div id="productList" class="divide-y divide-gray-200"></div>
             </div>
         </div>
 
-        <!-- 購物車區塊 -->
+        <!-- 購物車 -->
         <div id="cartSection" class="section" style="display: none;">
-            <h2 class="text-xl font-bold mb-4 text-gray-700">你的購物車</h2>
+            <h2 class="text-xl font-bold mb-4 text-gray-700" id="cartTitle">你的購物車</h2>
             
-            <!-- 改用響應式 DIV 表格 -->
             <div class="bg-white border rounded-lg shadow-sm">
-                <!-- 桌機版標題列 (手機版隱藏) -->
                 <div class="hidden md:flex items-center gap-4 bg-gray-100 p-4 text-sm uppercase tracking-wider text-gray-600 font-bold rounded-t-lg">
                     <div class="w-16">Code</div>
                     <div class="flex-1">Name</div>
@@ -82,80 +64,85 @@
                     <div class="w-24 text-right">小計 ($)</div>
                     <div class="w-16 text-center">操作</div>
                 </div>
-                
-                <!-- 購物車清單內容 -->
-                <div id="cartList" class="divide-y divide-gray-200">
-                    <!-- 購物車資料會放在這裡 -->
-                </div>
+                <div id="cartList" class="divide-y divide-gray-200"></div>
             </div>
 
             <div class="mt-6 flex flex-col items-end gap-3 border-t pt-4">
                 <h3 class="text-xl font-bold text-gray-800">總金額: $<span id="cartTotal" class="text-green-600">0</span></h3>
-                <button id="checkoutBtn" class="bg-green-600 text-white font-medium px-6 py-2.5 rounded-lg shadow hover:bg-green-700 transition duration-200">確認訂購</button>
+                <button id="checkoutBtn" class="bg-green-600 text-white font-medium px-6 py-2.5 rounded-lg shadow hover:bg-green-700 transition">確認訂購</button>
+                <button id="cancelEditBtn" style="display:none;" onclick="cancelEdit()" class="text-gray-500 hover:text-gray-700 text-sm">取消修改</button>
             </div>
         </div>
 
-        <!-- 訂單記錄區塊 -->
+        <!-- 訂單記錄 -->
         <div id="historySection" class="section" style="display: none;">
             <h2 class="text-xl font-bold mb-4 text-gray-700">歷史訂單記錄</h2>
-            <div id="orderHistoryList" class="space-y-4">
-                <!-- 訂單記錄會放在這裡 -->
-            </div>
+            <div id="orderHistoryList" class="space-y-4"></div>
         </div>
 
-        <!-- 管理員後台區塊 -->
+        <!-- 管理員 -->
         <div id="adminSection" class="section" style="display: none;">
-            <!-- 管理員分頁切換 -->
             <div class="flex flex-col md:flex-row gap-3 mb-6 border-b pb-4">
                 <button onclick="switchAdminTab('orders')" id="tabOrders" class="bg-green-600 text-white px-4 py-2 rounded-lg shadow-sm font-medium">📦 訂單管理</button>
+                <button onclick="switchAdminTab('supplier')" id="tabSupplier" class="bg-gray-100 text-gray-700 hover:bg-gray-200 px-4 py-2 rounded-lg font-medium transition">🏢 供應商總單</button>
                 <button onclick="switchAdminTab('products')" id="tabProducts" class="bg-gray-100 text-gray-700 hover:bg-gray-200 px-4 py-2 rounded-lg font-medium transition">🏷️ 產品管理</button>
             </div>
 
             <!-- 訂單管理分頁 -->
             <div id="adminOrdersTab">
-                <h2 class="text-xl font-bold mb-2 text-gray-700">管理員後台 - 所有同事訂單</h2>
-                <p class="text-sm text-gray-500 mb-6">在此可以檢視所有人的訂單，並進行取消/刪除。</p>
-                <div id="allOrdersList" class="space-y-4">
-                    <!-- 所有訂單會顯示在這裡 -->
+                <div class="flex flex-col md:flex-row justify-between md:items-center mb-4 gap-4">
+                    <h2 class="text-xl font-bold text-gray-700">所有同事訂單</h2>
+                    <select id="adminMonthFilter" onchange="renderAdminOrders()" class="border border-gray-300 rounded p-2 focus:ring-green-500 outline-none"></select>
+                </div>
+                <div id="allOrdersList" class="space-y-4"></div>
+            </div>
+
+            <!-- 供應商清單分頁 -->
+            <div id="adminSupplierTab" style="display: none;">
+                <div class="flex flex-col md:flex-row justify-between md:items-center mb-4 gap-4">
+                    <h2 class="text-xl font-bold text-gray-700">供應商總單預覽</h2>
+                    <select id="supplierMonthFilter" onchange="renderSupplierList()" class="border border-gray-300 rounded p-2 focus:ring-green-500 outline-none"></select>
+                </div>
+                
+                <div class="bg-white border rounded-lg shadow-sm">
+                    <div class="hidden md:flex items-center gap-4 bg-gray-100 p-4 text-sm uppercase tracking-wider text-gray-600 font-bold rounded-t-lg">
+                        <div class="w-16">Code</div>
+                        <div class="flex-1">Name</div>
+                        <div class="w-20 text-right">Price ($)</div>
+                        <div class="w-20 text-center">總數量</div>
+                        <div class="w-24 text-right">總計 ($)</div>
+                    </div>
+                    <div id="supplierListContainer" class="divide-y divide-gray-200"></div>
+                </div>
+                <div class="mt-4 text-right text-xl font-bold text-gray-800">
+                    大總計: $<span id="supplierGrandTotal" class="text-green-600">0</span>
                 </div>
             </div>
 
             <!-- 產品管理分頁 -->
             <div id="adminProductsTab" style="display: none;">
-                <h2 class="text-xl font-bold mb-4 text-gray-700">產品資料庫管理</h2>
-                
-                <!-- 一鍵匯入提示區 -->
+                <!-- 保持原本的產品管理介面 -->
                 <div class="bg-blue-50 border border-blue-100 p-4 rounded-lg mb-6 flex flex-col md:flex-row justify-between md:items-center gap-4">
                     <div>
                         <p class="text-blue-800 font-bold">初次啟用資料庫？</p>
-                        <p class="text-sm text-blue-600 mt-1">點擊右方按鈕，將 products.js 中的現有產品一鍵匯入到資料庫中。（匯入過請勿重複點擊）</p>
+                        <p class="text-sm text-blue-600 mt-1">將 products.js 中的現有產品一鍵匯入到資料庫中。</p>
                     </div>
                     <button onclick="importProductsToDB()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow-sm text-sm whitespace-nowrap">一鍵匯入舊資料</button>
                 </div>
-
-                <!-- 新增產品表單 -->
                 <div class="bg-white p-5 border border-gray-200 rounded-lg shadow-sm mb-6">
                     <h3 class="font-bold text-gray-700 mb-3 border-b pb-2">➕ 新增 / 修改產品</h3>
-                    <p class="text-xs text-gray-500 mb-4">提示：如果輸入的 Code 與現有產品相同，將會直接覆蓋（修改）該產品的資料。</p>
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
-                        <input type="text" id="newProdCode" placeholder="Code (例: A01)" class="border border-gray-300 p-2 rounded focus:ring-2 focus:ring-green-500 outline-none">
-                        <input type="text" id="newProdName" placeholder="產品名稱" class="border border-gray-300 p-2 rounded focus:ring-2 focus:ring-green-500 outline-none">
-                        <input type="text" id="newProdPacking" placeholder="包裝 (例: 250ml x 24)" class="border border-gray-300 p-2 rounded focus:ring-2 focus:ring-green-500 outline-none">
-                        <input type="number" id="newProdPrice" placeholder="價錢 ($)" class="border border-gray-300 p-2 rounded focus:ring-2 focus:ring-green-500 outline-none">
+                        <input type="text" id="newProdCode" placeholder="Code (例: A01)" class="border border-gray-300 p-2 rounded">
+                        <input type="text" id="newProdName" placeholder="產品名稱" class="border border-gray-300 p-2 rounded">
+                        <input type="text" id="newProdPacking" placeholder="包裝" class="border border-gray-300 p-2 rounded">
+                        <input type="number" id="newProdPrice" placeholder="價錢 ($)" class="border border-gray-300 p-2 rounded">
                     </div>
-                    <button onclick="addNewProduct()" class="mt-4 bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded shadow-sm w-full md:w-auto font-medium">確認儲存</button>
+                    <button onclick="addNewProduct()" class="mt-4 bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded font-medium">確認儲存</button>
                 </div>
-
-                <!-- 現有產品列表 -->
-                <h3 class="font-bold text-gray-700 mb-3">現有產品清單</h3>
-                <div id="adminProductList" class="divide-y divide-gray-200 border rounded-lg bg-white shadow-sm">
-                    <!-- 管理員產品列表會由 JS 生成 -->
-                </div>
+                <div id="adminProductList" class="divide-y divide-gray-200 border rounded-lg bg-white shadow-sm"></div>
             </div>
         </div>
     </main>
-
-    <!-- 載入 Firebase 與主程式 -->
     <script type="module" src="app.js"></script>
 </body>
 </html>
