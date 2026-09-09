@@ -70,7 +70,7 @@ export default async function handler(req, res) {
 
         // 生成 PDF 1: 內部名單
         const internalPdfBuffer = await generatePdfBuffer((doc) => {
-            doc.font(fontPath).fontSize(20).text(`${year}年${month + 1}月 飲品訂購內部總表`, { align: 'center' }).moveDown();
+            doc.font(fontPath).fontSize(20).text(`${year}年${month + 1}月 藍色奶訂購內部總表`, { align: 'center' }).moveDown();
             doc.fontSize(12).text('姓名', 30, doc.y, { continued: true, width: 80 }).text('編號', 110, doc.y, { continued: true, width: 60 }).text('產品名稱', 170, doc.y, { continued: true, width: 200 }).text('數量', 370, doc.y, { continued: true, width: 50 }).text('小計($)', 420, doc.y);
             doc.moveTo(30, doc.y).lineTo(500, doc.y).stroke().moveDown(0.5);
             allItems.forEach(i => {
@@ -97,7 +97,7 @@ export default async function handler(req, res) {
         await transporter.sendMail({
             from: process.env.EMAIL_USER,
             to: process.env.EMAIL_RECEIVER,
-            subject: `${year}年${month + 1}月 - 飲品訂購雙清單結算`,
+            subject: `${year}年${month + 1}月 - 藍色奶訂購雙清單結算`,
             text: `截單已完成！\n\n附檔包含兩份文件：\n1. Internal_Order_List (內部明細，顯示同事名字)\n2. Supplier_Order_List (供應商專用，合併相同商品總量)\n\n總金額：$${grandTotal}`,
             attachments: [
                 { filename: `Internal_Order_List_${year}_${month + 1}.pdf`, content: internalPdfBuffer },
