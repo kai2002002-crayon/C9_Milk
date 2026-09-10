@@ -352,12 +352,16 @@ async function loadOrderHistory() {
 // ==========================================
 // 管理員功能
 // ==========================================
+// ==========================================
+// 管理員功能
+// ==========================================
 window.switchAdminTab = (tab) => {
     ['orders', 'supplier', 'products'].forEach(t => {
         document.getElementById(`admin${t.charAt(0).toUpperCase() + t.slice(1)}Tab`).style.display = t === tab ? 'block' : 'none';
-        document.getElementById(`tab${t.charAt(0).toUpperCase() + t.slice(1)}`).className = t === tab ? "bg-green-600 text-white px-4 py-2 rounded-lg font-medium" : "bg-gray-100 text-gray-700 hover:bg-gray-200 px-4 py-2 rounded-lg font-medium";
+        document.getElementById(`tab${t.charAt(0).toUpperCase() + t.slice(1)}`).className = t === tab ? "bg-green-600 text-white px-4 py-2 rounded-lg font-medium" : "bg-gray-100 text-gray-700 hover:bg-gray-200 px-4 py-2 rounded-lg font-medium transition";
     });
     if(tab === 'supplier') renderSupplierList();
+    if(tab === 'products') renderAdminProducts(); // 【修復】加入這行，切換時才會畫出產品清單
 };
 
 async function loadAllOrdersForAdmin() {
@@ -374,7 +378,6 @@ async function loadAllOrdersForAdmin() {
         
         allOrdersCache.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
         
-        // 建立月份選單
         const mFilter1 = document.getElementById('adminMonthFilter');
         const mFilter2 = document.getElementById('supplierMonthFilter');
         const sortedMonths = Array.from(months).sort().reverse();
@@ -390,7 +393,7 @@ async function loadAllOrdersForAdmin() {
 window.renderAdminOrders = () => {
     const sel = document.getElementById('adminMonthFilter').value;
     const filtered = allOrdersCache.filter(o => o.createdAt && getOrderCycleMonth(o.createdAt.toMillis()) === sel);
-    document.getElementById('allOrdersList').innerHTML = filtered.length ? filtered.map(o => generateOrderHTML(o, true)).join('') : '此月無訂單';
+    document.getElementById('allOrdersList').innerHTML = filtered.length ? filtered.map(o => generateOrderHTML(o, true)).join('') : '<p class="text-gray-500">此週期無訂單</p>';
 };
 
 window.renderSupplierList = () => {
@@ -423,7 +426,9 @@ window.renderSupplierList = () => {
     document.getElementById('supplierGrandTotal').innerText = grandTotal;
 };
 
-// 3. 產品管理 (新增、匯入、刪除)
+// ==========================================
+// 產品管理功能 (匯入、新增、修改、刪除)
+// ==========================================
 window.importProductsToDB = async () => {
     if(!confirm("確定要將原本 products.js 的資料匯入到資料庫嗎？\n(如果已經匯入過，請不要重複執行以免覆蓋現有資料)")) return;
     
@@ -432,7 +437,6 @@ window.importProductsToDB = async () => {
     importBtn.disabled = true;
 
     try {
-        // 利用 setDoc 並以產品 code 作為文件 ID，確保不會重複
         for (const p of oldProducts) {
             await setDoc(doc(db, "products", p.code), p);
         }
@@ -457,11 +461,9 @@ window.addNewProduct = async () => {
     if(!code || !name || !packing || isNaN(price)) return alert("請填寫完整產品資料，且價錢必須為數字！");
 
     try {
-        // 使用 code 當作 ID，如果已經存在就會自動覆寫(修改)
         await setDoc(doc(db, "products", code), { code, name, packing, price });
         alert("產品儲存成功！");
         
-        // 清空輸入框
         document.getElementById('newProdCode').value = '';
         document.getElementById('newProdName').value = '';
         document.getElementById('newProdPacking').value = '';
@@ -488,20 +490,44 @@ window.deleteProduct = async (code, name) => {
     }
 };
 
+// 【新增】編輯產品功能，自動帶入資料
+window.editProduct = (code) => {
+    const p = dynamicProducts.find(x => x.code === code);
+    if (p) {
+        document.getElementById('newProdCode').value = p.code;
+        document.getElementById('newProdName').value = p.name;
+        document.getElementById('newProdPacking').value = p.packing;
+        document.getElementById('newProdPrice').value = p.price;
+        
+        document.getElementById('newProdCode').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        
+        const codeInput = document.getElementById('newProdCode');
+        codeInput.style.backgroundColor = '#fef3c7';
+        setTimeout(() => codeInput.style.backgroundColor = '', 1000);
+    }
+};
+
+// 產生管理員後台的產品清單
 function renderAdminProducts() {
     const listDiv = document.getElementById('adminProductList');
     
-    // 依據 code 排一下順序
+    if (dynamicProducts.length === 0) {
+        listDiv.innerHTML = '<div class="p-6 text-center text-gray-500">目前資料庫沒有產品。如果您是第一次使用，請點擊上方「一鍵匯入舊資料」。</div>';
+        return;
+    }
+    
     const sorted = [...dynamicProducts].sort((a, b) => a.code.localeCompare(b.code, undefined, {numeric: true}));
     
     listDiv.innerHTML = sorted.map(p => `
-        <div class="flex flex-col md:flex-row justify-between md:items-center p-4 hover:bg-gray-50">
+        <div class="flex flex-col md:flex-row justify-between md:items-center p-4 hover:bg-gray-50 border-b">
             <div class="flex items-start md:items-center gap-4">
                 <span class="text-sm text-gray-500 font-mono w-12">${p.code}</span>
                 <span class="font-medium text-gray-800">${p.name} <span class="text-sm text-gray-500 font-normal ml-2">(${p.packing})</span></span>
             </div>
-            <div class="flex items-center gap-4 mt-2 md:mt-0 justify-end w-full md:w-auto border-t md:border-0 pt-2 md:pt-0">
-                <span class="text-green-600 font-bold">$${p.price}</span>
+            <div class="flex items-center gap-2 mt-2 md:mt-0 justify-end w-full md:w-auto pt-2 md:pt-0">
+                <span class="text-green-600 font-bold mr-2">$${p.price}</span>
+                <!-- 【加入】編輯按鈕 -->
+                <button onclick="editProduct('${p.code}')" class="text-blue-500 hover:text-blue-700 text-sm border border-blue-200 px-3 py-1 rounded transition bg-white">編輯</button>
                 <button onclick="deleteProduct('${p.code}', '${p.name}')" class="text-red-500 hover:text-red-700 text-sm border border-red-200 px-3 py-1 rounded transition bg-white">刪除</button>
             </div>
         </div>
