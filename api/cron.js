@@ -46,17 +46,29 @@ export default async function handler(req, res) {
         const snapshot = await db.collection('orders').where('createdAt', '>=', startOfMonth).where('createdAt', '<=', endOfMonth).get();
         if (snapshot.empty) return res.status(200).send('本月無訂單。');
 
-        let allItems = []; // 給內部看的詳細名單
-        let supplierMap = {}; // 給供應商看的合併清單
+        let internalMap = {}; // 【修改】改用 Map 來按「姓名」合併訂單
+        let supplierMap = {}; 
         let grandTotal = 0;
 
         snapshot.forEach(doc => {
             const order = doc.data();
+            const personName = order.orderName; // 取得訂購人姓名
+
+            if (!internalMap[personName]) {
+                internalMap[personName] = {}; // 初始化這個人的訂單清單
+            }
+
             order.items.forEach(item => {
-                allItems.push({ colleague: order.orderName, code: item.code, name: item.name, qty: item.qty, subtotal: item.subtotal });
+                // 1. 合併給內部看 (按人名 -> 再按產品)
+                if (!internalMap[personName][item.code]) {
+                    internalMap[personName][item.code] = { code: item.code, name: item.name, qty: 0, subtotal: 0 };
+                }
+                internalMap[personName][item.code].qty += item.qty;
+                internalMap[personName][item.code].subtotal += item.subtotal;
+                
                 grandTotal += item.subtotal;
 
-                // 合併同款商品給供應商
+                // 2. 合併給供應商看 (純按產品)
                 if(!supplierMap[item.code]) {
                     supplierMap[item.code] = { code: item.code, name: item.name, price: item.price, qty: 0, subtotal: 0 };
                 }
@@ -68,14 +80,44 @@ export default async function handler(req, res) {
         const supplierItems = Object.values(supplierMap).sort((a, b) => a.code.localeCompare(b.code, undefined, {numeric: true}));
         const fontPath = path.join(process.cwd(), 'api', 'NotoSansTC-Regular.ttf');
 
-        // 生成 PDF 1: 內部名單
+        // 生成 PDF 1: 內部名單 (優化排版)
         const internalPdfBuffer = await generatePdfBuffer((doc) => {
-            doc.font(fontPath).fontSize(20).text(`${year}年${month + 1}月 藍色奶訂購內部總表`, { align: 'center' }).moveDown();
-            doc.fontSize(12).text('姓名', 30, doc.y, { continued: true, width: 80 }).text('編號', 110, doc.y, { continued: true, width: 60 }).text('產品名稱', 170, doc.y, { continued: true, width: 200 }).text('數量', 370, doc.y, { continued: true, width: 50 }).text('小計($)', 420, doc.y);
+            doc.font(fontPath).fontSize(20).text(`${year}年${month + 1}月 飲品訂購內部總表`, { align: 'center' }).moveDown();
+            doc.fontSize(12)
+               .text('姓名', 30, doc.y, { continued: true, width: 80 })
+               .text('編號', 110, doc.y, { continued: true, width: 60 })
+               .text('產品名稱', 170, doc.y, { continued: true, width: 200 })
+               .text('數量', 370, doc.y, { continued: true, width: 50 })
+               .text('小計($)', 420, doc.y);
             doc.moveTo(30, doc.y).lineTo(500, doc.y).stroke().moveDown(0.5);
-            allItems.forEach(i => {
-                doc.text(i.colleague, 30, doc.y, { continued: true, width: 80 }).text(i.code, 110, doc.y, { continued: true, width: 60 }).text(i.name, 170, doc.y, { continued: true, width: 200 }).text(i.qty.toString(), 370, doc.y, { continued: true, width: 50 }).text(i.subtotal.toString(), 420, doc.y).moveDown(0.5);
+            
+            // 將人名依照筆畫或字母排序
+            const sortedNames = Object.keys(internalMap).sort();
+            
+            sortedNames.forEach(name => {
+                const items = Object.values(internalMap[name]).sort((a, b) => a.code.localeCompare(b.code, undefined, {numeric: true}));
+                
+                let personTotal = 0;
+                
+                items.forEach((i, index) => {
+                    personTotal += i.subtotal;
+                    // 排版小巧思：同一個人的訂單，只有第一行會印出名字，後面留白，視覺上非常乾淨
+                    const displayName = index === 0 ? name : '';
+                    
+                    doc.text(displayName, 30, doc.y, { continued: true, width: 80 })
+                       .text(i.code, 110, doc.y, { continued: true, width: 60 })
+                       .text(i.name, 170, doc.y, { continued: true, width: 200 })
+                       .text(i.qty.toString(), 370, doc.y, { continued: true, width: 50 })
+                       .text(i.subtotal.toString(), 420, doc.y).moveDown(0.5);
+                });
+                
+                // 每個人結束後，畫一條淺色虛線或灰線分隔，並顯示個人的總金額
+                doc.fontSize(10).fillColor('gray')
+                   .text(`${name} 個人應付: $${personTotal}`, { align: 'right' }).moveDown(0.3);
+                doc.fillColor('black').fontSize(12); // 顏色調回黑色
+                doc.moveTo(30, doc.y).lineTo(500, doc.y).dash(2, { space: 2 }).strokeColor('#cccccc').stroke().undash().strokeColor('black').moveDown(0.5);
             });
+
             doc.moveDown().moveTo(30, doc.y).lineTo(500, doc.y).stroke().moveDown();
             doc.fontSize(16).text(`本月總金額: $${grandTotal}`, { align: 'right' });
         });
