@@ -82,56 +82,97 @@ export default async function handler(req, res) {
 
         // 生成 PDF 1: 內部名單 (優化排版)
         const internalPdfBuffer = await generatePdfBuffer((doc) => {
-            doc.font(fontPath).fontSize(20).text(`${year}年${month + 1}月 飲品訂購內部總表`, { align: 'center' }).moveDown();
-            doc.fontSize(12)
-               .text('姓名', 30, doc.y, { continued: true, width: 80 })
-               .text('編號', 110, doc.y, { continued: true, width: 60 })
-               .text('產品名稱', 170, doc.y, { continued: true, width: 200 })
-               .text('數量', 370, doc.y, { continued: true, width: 50 })
-               .text('小計($)', 420, doc.y);
-            doc.moveTo(30, doc.y).lineTo(500, doc.y).stroke().moveDown(0.5);
+            doc.font(fontPath).fontSize(20).text(`${year}年${month + 1}月 飲品訂購內部總表`, { align: 'center' }).moveDown(1.5);
+            
+            // 表頭 (使用絕對定位)
+            doc.fontSize(12);
+            let startY = doc.y;
+            doc.text('姓名', 30, startY, { lineBreak: false });
+            doc.text('編號', 120, startY, { lineBreak: false });
+            doc.text('產品名稱', 180, startY, { lineBreak: false });
+            doc.text('數量', 420, startY, { lineBreak: false });
+            doc.text('小計($)', 480, startY, { lineBreak: false });
+            
+            doc.moveDown(0.8);
+            doc.moveTo(30, doc.y).lineTo(530, doc.y).stroke().moveDown(0.8);
             
             // 將人名依照筆畫或字母排序
             const sortedNames = Object.keys(internalMap).sort();
             
             sortedNames.forEach(name => {
                 const items = Object.values(internalMap[name]).sort((a, b) => a.code.localeCompare(b.code, undefined, {numeric: true}));
-                
                 let personTotal = 0;
                 
                 items.forEach((i, index) => {
                     personTotal += i.subtotal;
-                    // 排版小巧思：同一個人的訂單，只有第一行會印出名字，後面留白，視覺上非常乾淨
                     const displayName = index === 0 ? name : '';
                     
-                    doc.text(displayName, 30, doc.y, { continued: true, width: 80 })
-                       .text(i.code, 110, doc.y, { continued: true, width: 60 })
-                       .text(i.name, 170, doc.y, { continued: true, width: 200 })
-                       .text(i.qty.toString(), 370, doc.y, { continued: true, width: 50 })
-                       .text(i.subtotal.toString(), 420, doc.y).moveDown(0.5);
+                    // 防呆：如果這一行快到底部了，自動換下一頁
+                    if (doc.y > 740) doc.addPage();
+                    
+                    let rowY = doc.y;
+                    
+                    // 計算這一行最高會佔用多少高度（避免長檔名與名字重疊）
+                    const nameHeight = doc.heightOfString(displayName, { width: 80 }) || 15;
+                    const prodHeight = doc.heightOfString(i.name, { width: 230 }) || 15;
+                    const maxRowHeight = Math.max(nameHeight, prodHeight);
+
+                    // 在同一個 Y 軸高度印出這一行的所有資料
+                    doc.text(displayName, 30, rowY, { width: 80 });
+                    doc.text(i.code, 120, rowY, { width: 50 });
+                    doc.text(i.name, 180, rowY, { width: 230 });
+                    doc.text(i.qty.toString(), 420, rowY, { width: 40 });
+                    doc.text(i.subtotal.toString(), 480, rowY, { width: 50 });
+                    
+                    // 將 Y 軸精準移動到這行最高的文字下方，加上一點間距
+                    doc.y = rowY + maxRowHeight + 10;
                 });
                 
-                // 每個人結束後，畫一條淺色虛線或灰線分隔，並顯示個人的總金額
+                // 個人小計與分隔線
+                if (doc.y > 770) doc.addPage();
                 doc.fontSize(10).fillColor('gray')
-                   .text(`${name} 個人應付: $${personTotal}`, { align: 'right' }).moveDown(0.3);
-                doc.fillColor('black').fontSize(12); // 顏色調回黑色
-                doc.moveTo(30, doc.y).lineTo(500, doc.y).dash(2, { space: 2 }).strokeColor('#cccccc').stroke().undash().strokeColor('black').moveDown(0.5);
+                   .text(`${name} 個人應付: $${personTotal}`, 30, doc.y, { align: 'right', width: 500 }).moveDown(0.3);
+                doc.fillColor('black').fontSize(12);
+                doc.moveTo(30, doc.y).lineTo(530, doc.y).dash(2, { space: 2 }).strokeColor('#cccccc').stroke().undash().strokeColor('black').moveDown(0.8);
             });
 
-            doc.moveDown().moveTo(30, doc.y).lineTo(500, doc.y).stroke().moveDown();
-            doc.fontSize(16).text(`本月總金額: $${grandTotal}`, { align: 'right' });
+            doc.moveDown().moveTo(30, doc.y).lineTo(530, doc.y).stroke().moveDown();
+            doc.fontSize(16).text(`本月總金額: $${grandTotal}`, 30, doc.y, { align: 'right', width: 500 });
         });
 
-        // 生成 PDF 2: 供應商專用
+        // 生成 PDF 2: 供應商專用 (優化排版)
         const supplierPdfBuffer = await generatePdfBuffer((doc) => {
-            doc.font(fontPath).fontSize(20).text(`${year}年${month + 1}月 訂單總出貨清單`, { align: 'center' }).moveDown();
-            doc.fontSize(12).text('編號', 30, doc.y, { continued: true, width: 60 }).text('產品名稱', 100, doc.y, { continued: true, width: 230 }).text('單價($)', 330, doc.y, { continued: true, width: 60 }).text('總數量', 390, doc.y, { continued: true, width: 50 }).text('總計($)', 440, doc.y);
-            doc.moveTo(30, doc.y).lineTo(500, doc.y).stroke().moveDown(0.5);
+            doc.font(fontPath).fontSize(20).text(`${year}年${month + 1}月 訂單總出貨清單`, { align: 'center' }).moveDown(1.5);
+            
+            // 表頭
+            doc.fontSize(12);
+            let startY = doc.y;
+            doc.text('編號', 30, startY, { lineBreak: false });
+            doc.text('產品名稱', 100, startY, { lineBreak: false });
+            doc.text('單價($)', 350, startY, { lineBreak: false });
+            doc.text('總數量', 420, startY, { lineBreak: false });
+            doc.text('總計($)', 480, startY, { lineBreak: false });
+            
+            doc.moveDown(0.8);
+            doc.moveTo(30, doc.y).lineTo(530, doc.y).stroke().moveDown(0.8);
+            
             supplierItems.forEach(i => {
-                doc.text(i.code, 30, doc.y, { continued: true, width: 60 }).text(i.name, 100, doc.y, { continued: true, width: 230 }).text(i.price.toString(), 330, doc.y, { continued: true, width: 60 }).text(i.qty.toString(), 390, doc.y, { continued: true, width: 50 }).text(i.subtotal.toString(), 440, doc.y).moveDown(0.5);
+                if (doc.y > 750) doc.addPage();
+                
+                let rowY = doc.y;
+                const prodHeight = doc.heightOfString(i.name, { width: 240 }) || 15;
+                
+                doc.text(i.code, 30, rowY, { width: 60 });
+                doc.text(i.name, 100, rowY, { width: 240 });
+                doc.text(i.price.toString(), 350, rowY, { width: 60 });
+                doc.text(i.qty.toString(), 420, rowY, { width: 50 });
+                doc.text(i.subtotal.toString(), 480, rowY, { width: 50 });
+                
+                doc.y = rowY + prodHeight + 10;
             });
-            doc.moveDown().moveTo(30, doc.y).lineTo(500, doc.y).stroke().moveDown();
-            doc.fontSize(16).text(`本期應付總額: $${grandTotal}`, { align: 'right' });
+            
+            doc.moveDown().moveTo(30, doc.y).lineTo(530, doc.y).stroke().moveDown();
+            doc.fontSize(16).text(`本期應付總額: $${grandTotal}`, 30, doc.y, { align: 'right', width: 500 });
         });
 
         // 寄出雙 PDF 郵件
