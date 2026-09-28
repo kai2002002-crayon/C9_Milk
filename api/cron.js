@@ -35,7 +35,8 @@ export default async function handler(req, res) {
     const lastDay = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
     
     // 截單日判斷 (月尾前兩日)
-    if (date !== lastDay - 2) {
+    // 加入 force=yes 參數，讓管理員可以隨時從瀏覽器手動觸發
+    if (date !== lastDay - 2 && req.query.force !== 'yes') {
         return res.status(200).send(`非截單日，略過。`);
     }
 
